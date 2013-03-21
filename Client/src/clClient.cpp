@@ -51,12 +51,15 @@ void clClient::Start()
 	string sCommandLine;
 	string sResult;
 
-	cout << "Client application" << endl << endl;
+	cout << "Client working." << endl;
 
 	OpenSocket();
 
 	while (!bExit)
 	{
+		sCommandLine.clear();
+		sResult.clear();
+
 		cout << ">";
 		getline(cin, sCommandLine);
 		if (sCommandLine == "exit")

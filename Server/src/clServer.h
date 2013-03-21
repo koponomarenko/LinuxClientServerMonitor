@@ -38,6 +38,7 @@ private:
 
 	void OpenHostSocket();
 	void CloseHostSocket();
+	void CheckBaseFile();
 };
 
 #endif /* CLSERVER_H_ */

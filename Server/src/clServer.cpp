@@ -10,7 +10,7 @@
 #include <cstdio>
 #include <cstring>
 #include <errno.h>
-
+#include <iostream>
 #include <unistd.h> // for close/unlink function
 
 using namespace std;
@@ -29,6 +29,7 @@ clServer::clServer() : ListenerSock(0), ClientSock(0)
 
 clServer::~clServer()
 {
+	CloseHostSocket();
 }
 
 
@@ -43,15 +44,18 @@ void clServer::Start()
 	bool bExit = false;
 
 
+	CheckBaseFile();
 	OpenHostSocket();
 
-	// this part of code can make new threed
+	cout << "Server working." << endl;
+
+	// this part of code can make new thread
 	ClientSock = accept(ListenerSock, NULL, NULL);
 	if (ClientSock < 0)
 		throw string("socket failed");
 
 
-	// from this, this part of code can be treed
+	// from this, this part of code can be thread
 	while (!bExit)
 	{
 		sAcceptedLine.clear();
@@ -135,24 +139,16 @@ void clServer::ParseAndDoCommand(string & sCommandLine, string & sResult)
 
 void clServer::Set(const std::string & tag, const std::string & val)
 {
-	fstream fin(sBase_.c_str(), ios_base::in); // open file for input
+	ifstream fin(sBase_.c_str(), ios_base::in);
 	if (!fin.is_open())
-	{
-		// try to create a file
-		fin.close();
-		fin.open(sBase_.c_str(), ios_base::out);
-		if (!fin.is_open())
-			throw string("Error while opening file \"base.xml\" for writing");
-		fin << '<' << tag << '>' << val << "</" << tag << '>' << endl;
-		return;
-	}
-
+		throw string("Error while opening file \"base.xml\" for reading");
 
 	ofstream fout(sTmp_.c_str(), ios_base::out | ios_base::trunc);
 
 	string buf;
 	string buf_val;
 	bool bReplaced = false;
+
 	while (fin && fin.peek() != EOF)
 	{
 		if (fin.peek() == '\n')
@@ -203,9 +199,7 @@ void clServer::Set(const std::string & tag, const std::string & val)
 
 void clServer::Get(const std::string & tag, std::string & val) const
 {
-	ifstream fin;
-
-	fin.open(sBase_.c_str(), ios_base::in);
+	ifstream fin(sBase_.c_str(), ios_base::in);
 	if (!fin.is_open())
 		throw string("Error while opening file \"base.xml\" for reading");
 
@@ -237,6 +231,8 @@ void clServer::Get(const std::string & tag, std::string & val) const
 
 		getline(fin, buf, '>');
 	}
+
+	fin.close();
 }
 
 
@@ -258,4 +254,19 @@ void clServer::OpenHostSocket()
 void clServer::CloseHostSocket()
 {
 	close(ListenerSock);
+}
+
+
+void clServer::CheckBaseFile()
+{
+	fstream f(sBase_.c_str(), ios_base::in); // try to open file for input
+	if (!f.is_open())
+	{
+		f.close();
+		f.open(sBase_.c_str(), ios_base::out); // try to create a file
+		if (!f.is_open())
+			throw string("Error while creating file \"base.xml\"");
+	}
+
+	f.close();
 }
