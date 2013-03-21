@@ -104,7 +104,10 @@ void clServer::ParseAndDoCommand(string & sCommandLine, string & sResult)
 	/* preparations */
 	pos = sCommandLine.find_first_of(' ');
 	if (pos == string::npos)
-		throw string("Incorrect call of command");
+	{
+		sResult = "Incorrect call of command";
+		return;
+	}
 	sCommand = sCommandLine.substr(0, pos); // extract command
 	sCommandLine.erase(0, pos + 1); // erase command only
 
@@ -113,7 +116,10 @@ void clServer::ParseAndDoCommand(string & sCommandLine, string & sResult)
 	{
 		pos = sCommandLine.find_first_of(' ');
 		if (pos == string::npos)
-			throw string("Incorrect call of command");
+		{
+			sResult = "Incorrect call of command";
+			return;
+		}
 
 		string sTag = sCommandLine.substr(0, pos); // extract tag
 		string sValue = sCommandLine.substr(pos + 1); // extract value
@@ -124,7 +130,10 @@ void clServer::ParseAndDoCommand(string & sCommandLine, string & sResult)
 	{
 		pos = sCommandLine.find_first_of(' ');
 		if (pos != string::npos)
-			throw string("Incorrect call of command");
+		{
+			sResult = "Incorrect call of command";
+			return;
+		}
 
 		string sTag = sCommandLine; // extract tag
 		string sValue;
@@ -133,7 +142,7 @@ void clServer::ParseAndDoCommand(string & sCommandLine, string & sResult)
 		sResult = sValue.size() ? sValue : "Tag not found";
 	}
 	else
-		throw string("Incorrect call of command");
+		sResult = "Incorrect call of command";
 }
 
 
