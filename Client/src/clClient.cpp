@@ -8,39 +8,80 @@
 #include "clClient.h"
 #include <cstring>
 #include <iostream>
+#include <unistd.h> // for close/unlink function
 
 using namespace std;
 
 
-clClient::clClient(const std::string & sServSockName) : sServSockName_(sServSockName), Sock(0)
+clClient::clClient() : Sock(0)
 {
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(3425);
+	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 }
 
 clClient::~clClient()
 {
 }
 
+
+static int sendall(int s, const char * buf, int len, int flags)
+{
+    int total = 0;
+    int n;
+
+    while(total < len)
+    {
+        n = send(s, buf+total, len-total, flags);
+        if(n == -1) { break; }
+        total += n;
+    }
+
+    return (n==-1 ? -1 : total);
+}
+
+
 void clClient::Start()
 {
-	char buf[BUF_SIZE];
+	bool bIsResult;
+	bool bExit = false;
+	const short kBufSize = 512;
+	char buf[kBufSize];
+	int nBytes;
+	string sCommandLine;
+	string sResult;
 
-	cout << "Client application" << endl;
-	cout << "use --help for list command" << endl;
+	cout << "Client application" << endl << endl;
 
 	OpenSocket();
 
-	string sCommandLine;
-
-	while (true)
+	while (!bExit)
 	{
 		cout << ">";
 		getline(cin, sCommandLine);
 		if (sCommandLine == "exit")
 			break;
 
-		sendto(Sock, sCommandLine.c_str(), sCommandLine.size(), 0, &srvr_name, strlen(srvr_name.sa_data) + sizeof(srvr_name.sa_family));
+		sendall(Sock, sCommandLine.data(), sCommandLine.size(), 0); // my helpful own function
 
-		// Receive from
+		recv(Sock, &bIsResult, 1, 0);
+		if (bIsResult)
+		{
+			do
+			{
+				nBytes = recv(Sock, buf, kBufSize, 0);
+				if(nBytes <= 0) // error/closed connection
+				{
+					bExit = true;
+					break;
+				}
+				sResult.append(buf, nBytes);
+			} while (nBytes == kBufSize);
+
+			if (bExit) break;
+
+			cout << sResult << endl;
+		}
 	}
 
 	CloseSocket();
@@ -49,15 +90,15 @@ void clClient::Start()
 
 void clClient::OpenSocket()
 {
-	Sock = socket(AF_UNIX, SOCK_DGRAM, 0);
+	Sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (Sock < 0)
 		throw string("socket failed");
 
-	srvr_name.sa_family = AF_UNIX;
-	strcpy(srvr_name.sa_data, sServSockName_.c_str()); // 13 symbols max?
+	if(connect(Sock, (struct sockaddr *) &addr, sizeof(addr)) < 0)
+		throw string("connect failed");
 }
 
 void clClient::CloseSocket()
 {
-	// TODO: Do I need unlink socket?
+	close(Sock);
 }

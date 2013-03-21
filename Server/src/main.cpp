@@ -6,7 +6,7 @@ int main()
 {
 	try
 	{
-		clServer Server("socket.soc");
+		clServer Server;
 		Server.Start();
 	}
 	catch (std::string & ex)

@@ -9,7 +9,6 @@
 #include <fstream>
 #include <cstdio>
 #include <cstring>
-#include <sstream>
 #include <errno.h>
 
 #include <unistd.h> // for close/unlink function
@@ -21,8 +20,11 @@ string clServer::sTmp_ = "~base.xml";
 
 
 
-clServer::clServer(const std::string & sServSockName) : sServSockName_(sServSockName), Sock(0)
+clServer::clServer() : ListenerSock(0), ClientSock(0)
 {
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(3425);
+	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 }
 
 clServer::~clServer()
@@ -33,32 +35,63 @@ clServer::~clServer()
 void clServer::Start()
 {
 	int nBytes;
-	char buf[512] = {0};
+	const short kBufSize = 512;
+	char buf[kBufSize];
 	string sAcceptedLine;
+	string sResult;
+	bool bIsResult;
+	bool bExit = false;
 
-	OpenSocket();
 
-	while (1)
+	OpenHostSocket();
+
+	// this part of code can make new threed
+	ClientSock = accept(ListenerSock, NULL, NULL);
+	if (ClientSock < 0)
+		throw string("socket failed");
+
+
+	// from this, this part of code can be treed
+	while (!bExit)
 	{
 		sAcceptedLine.clear();
+		sResult.clear();
+
 		do
 		{
-			nBytes = recvfrom(Sock, buf, sizeof(buf) - 1,  0, 0, 0);
-			if (nBytes < 0)
-				throw string("recvfrom failed");
+			nBytes = recv(ClientSock, buf, kBufSize, 0);
+			if(nBytes <= 0) // error/closed connection
+			{
+				bExit = true;
+				break;
+			}
+			sAcceptedLine.append(buf, nBytes);
+		} while (nBytes == kBufSize);
 
-			buf[nBytes] = 0;
-			sAcceptedLine += buf;
-		} while (nBytes != 0);
+		if (bExit) break;
 
-		ParseAndDoCommand(sAcceptedLine);
+		ParseAndDoCommand(sAcceptedLine, sResult);
+
+		if (sResult.size())
+		{
+			bIsResult = true;
+			send(ClientSock, &bIsResult, 1, 0);
+			send(ClientSock, sResult.data(), sResult.size() , 0);
+		}
+		else
+		{
+			bIsResult = false;
+			send(ClientSock, &bIsResult, 1, 0);
+		}
 	}
 
-	CloseSocket();
+	close(ClientSock);
+
+	CloseHostSocket();
 }
 
 
-void clServer::ParseAndDoCommand(string & sCommandLine)
+void clServer::ParseAndDoCommand(string & sCommandLine, string & sResult)
 {
 	string sCommand;
 	size_t pos = string::npos;
@@ -93,7 +126,7 @@ void clServer::ParseAndDoCommand(string & sCommandLine)
 		string sValue;
 
 		Get(sTag, sValue);
-		//cout << (sValue.size() ? sValue : "Tag not found") << endl;
+		sResult = sValue.size() ? sValue : "Tag not found";
 	}
 	else
 		throw string("Incorrect call of command");
@@ -207,27 +240,22 @@ void clServer::Get(const std::string & tag, std::string & val) const
 }
 
 
-void clServer::OpenSocket()
+void clServer::OpenHostSocket()
 {
-	Sock = socket(AF_UNIX, SOCK_DGRAM, 0);
-	if (Sock < 0)
+	ListenerSock = socket(AF_INET, SOCK_STREAM, 0);
+	if (ListenerSock < 0)
 		throw string("socket failed");
 
-	srvr_name.sa_family = AF_UNIX;
-	strcpy(srvr_name.sa_data, sServSockName_.c_str()); // 13 symbols max?
 
-	if (bind(Sock, &srvr_name, strlen(srvr_name.sa_data) + sizeof(srvr_name.sa_family)) < 0)
-	{
-		stringstream ss;
-		ss << errno;
-		throw string("bind failed. Err numb: ") + ss.str();
-	}
+	if (bind(ListenerSock, (sockaddr*) &addr, sizeof(addr)) < 0)
+		throw string("bind failed");
+
+	listen(ListenerSock, 1);
 }
 
 
 
-void clServer::CloseSocket()
+void clServer::CloseHostSocket()
 {
-	close(Sock);
-	unlink(sServSockName_.c_str());
+	close(ListenerSock);
 }

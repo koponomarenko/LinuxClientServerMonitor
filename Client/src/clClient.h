@@ -11,19 +11,16 @@
 #include <string>
 #include <sys/types.h> // for socket
 #include <sys/socket.h> // for socket
+#include <netinet/in.h>
 
 class clClient
 {
-public:
-	enum { BUF_SIZE  = 512 };
-
 private:
-	std::string sServSockName_;
 	int Sock;
-	sockaddr srvr_name;
+	sockaddr_in addr;
 
 public:
-	clClient(const std::string & sServSockName);
+	clClient();
 	virtual ~clClient();
 
 	void Start();

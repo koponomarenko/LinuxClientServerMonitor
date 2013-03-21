@@ -11,6 +11,7 @@
 #include <string>
 #include <sys/types.h> // for socket
 #include <sys/socket.h> // for socket
+#include <netinet/in.h>
 
 
 class clServer
@@ -19,24 +20,24 @@ private:
 	static std::string sBase_;
 	static std::string sTmp_;
 
-	std::string sServSockName_;
-	int Sock;
-	sockaddr srvr_name;
+	int ListenerSock;
+	int ClientSock;
+	sockaddr_in addr;
 
 public:
-	clServer(const std::string & sServSockName);
+	clServer();
 	virtual ~clServer();
 
 	void Start();
 
 private:
-	void ParseAndDoCommand(std::string & sCommandLine);
+	void ParseAndDoCommand(std::string & sCommandLine, std::string & sResult);
 
 	void Set(const std::string & tag, const std::string & val);
 	void Get(const std::string & tag, std::string & val) const;
 
-	void OpenSocket();
-	void CloseSocket();
+	void OpenHostSocket();
+	void CloseHostSocket();
 };
 
 #endif /* CLSERVER_H_ */
