@@ -21,8 +21,8 @@ private:
 	static std::string sTmp_;
 
 	int ListenerSock;
-	int ClientSock;
 	sockaddr_in addr;
+	bool bStopSvr;
 
 public:
 	clServer();
@@ -31,14 +31,16 @@ public:
 	void Start();
 
 private:
-	void ParseAndDoCommand(std::string & sCommandLine, std::string & sResult);
+	void StartNewConnection(int ClientSock);
 
-	void Set(const std::string & tag, const std::string & val);
-	void Get(const std::string & tag, std::string & val) const;
+	void ParseAndDoCommand(std::string & sCommandLine, std::string & sResult);
 
 	void OpenHostSocket();
 	void CloseHostSocket();
 	void CheckBaseFile();
+
+	void Set(const std::string & tag, const std::string & val);
+	void Get(const std::string & tag, std::string & val) const;
 };
 
 #endif /* CLSERVER_H_ */

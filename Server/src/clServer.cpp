@@ -20,7 +20,7 @@ string clServer::sTmp_ = "~base.xml";
 
 
 
-clServer::clServer() : ListenerSock(0), ClientSock(0)
+clServer::clServer() : ListenerSock(0), bStopSvr(false)
 {
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(3425);
@@ -35,6 +35,26 @@ clServer::~clServer()
 
 void clServer::Start()
 {
+	CheckBaseFile();
+	OpenHostSocket();
+
+	cout << "Server working." << endl;
+
+	int ClientSock;
+	while (!bStopSvr)
+	{
+		ClientSock = accept(ListenerSock, NULL, NULL);
+		if (ClientSock < 0)
+			continue; // TODO
+		StartNewConnection(ClientSock);
+	}
+
+	CloseHostSocket();
+}
+
+
+void clServer::StartNewConnection(int ClientSock) // this part of code can be thread
+{
 	int nBytes;
 	const short kBufSize = 512;
 	char buf[kBufSize];
@@ -44,19 +64,7 @@ void clServer::Start()
 	bool bExit = false;
 
 
-	CheckBaseFile();
-	OpenHostSocket();
-
-	cout << "Server working." << endl;
-
-	// this part of code can make new thread
-	ClientSock = accept(ListenerSock, NULL, NULL);
-	if (ClientSock < 0)
-		throw string("socket failed");
-
-
-	// from this, this part of code can be thread
-	while (!bExit)
+	while (!bExit && !bStopSvr)
 	{
 		sAcceptedLine.clear();
 		sResult.clear();
@@ -74,7 +82,15 @@ void clServer::Start()
 
 		if (bExit) break;
 
-		ParseAndDoCommand(sAcceptedLine, sResult);
+		try
+		{
+			ParseAndDoCommand(sAcceptedLine, sResult);
+		}
+		catch (string & ex) // TODO Close All sockets and restart server
+		{
+			sResult = ex;
+			bExit = true;
+		}
 
 		if (sResult.size())
 		{
@@ -90,8 +106,6 @@ void clServer::Start()
 	}
 
 	close(ClientSock);
-
-	CloseHostSocket();
 }
 
 
@@ -103,16 +117,21 @@ void clServer::ParseAndDoCommand(string & sCommandLine, string & sResult)
 
 	/* preparations */
 	pos = sCommandLine.find_first_of(' ');
-	if (pos == string::npos)
+	if (pos != string::npos)
 	{
-		sResult = "Incorrect call of command";
-		return;
+		sCommand = sCommandLine.substr(0, pos); // extract command
+		sCommandLine.erase(0, pos + 1); // erase command only
 	}
-	sCommand = sCommandLine.substr(0, pos); // extract command
-	sCommandLine.erase(0, pos + 1); // erase command only
+	else
+		sCommand = sCommandLine;
 
 
-	if (sCommand == "set")
+	if (sCommand == "killsvr")
+	{
+		bStopSvr = true;
+		sResult = "Server shutting down ...";
+	}
+	else if (sCommand == "set")
 	{
 		pos = sCommandLine.find_first_of(' ');
 		if (pos == string::npos)
@@ -128,8 +147,7 @@ void clServer::ParseAndDoCommand(string & sCommandLine, string & sResult)
 	}
 	else if (sCommand == "get")
 	{
-		pos = sCommandLine.find_first_of(' ');
-		if (pos != string::npos)
+		if (sCommandLine.find_first_of(' ') != string::npos)
 		{
 			sResult = "Incorrect call of command";
 			return;
@@ -144,6 +162,44 @@ void clServer::ParseAndDoCommand(string & sCommandLine, string & sResult)
 	else
 		sResult = "Incorrect call of command";
 }
+
+
+
+void clServer::OpenHostSocket()
+{
+	ListenerSock = socket(AF_INET, SOCK_STREAM, 0);
+	if (ListenerSock < 0)
+		throw string("socket failed");
+
+	if (bind(ListenerSock, (sockaddr*) &addr, sizeof(addr)) < 0)
+		throw string("bind failed");
+
+	listen(ListenerSock, 1);
+}
+
+
+
+void clServer::CloseHostSocket()
+{
+	close(ListenerSock);
+}
+
+
+
+void clServer::CheckBaseFile()
+{
+	fstream f(sBase_.c_str(), ios_base::in); // try to open file for input
+	if (!f.is_open())
+	{
+		f.close();
+		f.open(sBase_.c_str(), ios_base::out); // try to create a file
+		if (!f.is_open())
+			throw string("Error while creating file \"base.xml\"");
+	}
+
+	f.close();
+}
+
 
 
 void clServer::Set(const std::string & tag, const std::string & val)
@@ -242,40 +298,4 @@ void clServer::Get(const std::string & tag, std::string & val) const
 	}
 
 	fin.close();
-}
-
-
-void clServer::OpenHostSocket()
-{
-	ListenerSock = socket(AF_INET, SOCK_STREAM, 0);
-	if (ListenerSock < 0)
-		throw string("socket failed");
-
-
-	if (bind(ListenerSock, (sockaddr*) &addr, sizeof(addr)) < 0)
-		throw string("bind failed");
-
-	listen(ListenerSock, 1);
-}
-
-
-
-void clServer::CloseHostSocket()
-{
-	close(ListenerSock);
-}
-
-
-void clServer::CheckBaseFile()
-{
-	fstream f(sBase_.c_str(), ios_base::in); // try to open file for input
-	if (!f.is_open())
-	{
-		f.close();
-		f.open(sBase_.c_str(), ios_base::out); // try to create a file
-		if (!f.is_open())
-			throw string("Error while creating file \"base.xml\"");
-	}
-
-	f.close();
 }

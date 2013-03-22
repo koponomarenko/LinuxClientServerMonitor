@@ -52,6 +52,7 @@ void clClient::Start()
 	string sResult;
 
 	cout << "Client working." << endl;
+	cout << "use \"exit\" to exit" << endl;
 
 	OpenSocket();
 
@@ -75,6 +76,7 @@ void clClient::Start()
 				nBytes = recv(Sock, buf, kBufSize, 0);
 				if(nBytes <= 0) // error/closed connection
 				{
+					cout << "connect lost" << endl;
 					bExit = true;
 					break;
 				}
@@ -100,6 +102,8 @@ void clClient::OpenSocket()
 	if(connect(Sock, (struct sockaddr *) &addr, sizeof(addr)) < 0)
 		throw string("connect failed");
 }
+
+
 
 void clClient::CloseSocket()
 {

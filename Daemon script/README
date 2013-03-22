@@ -1,0 +1,19 @@
+This is working script for this project.
+
+Put this script in /etc/init.d/
+
+Put Server program in /usr/local/bin/
+or any other directory (don't forget also change it in script file).
+
+Register script as a start-up service (daemon):
+$ sudo chmod +x /etc/init.d/Server
+$ sudo update-rc.d Server defaults
+
+That's all!
+
+You can manage you Server by using comand like these:
+$ /etc/init.d/Server
+$ sudo /etc/init.d/Server stop
+$ /etc/init.d/Server status
+$ sudo /etc/init.d/Server start
+
