@@ -22,7 +22,6 @@ private:
 
 	int ListenerSock;
 	sockaddr_in addr;
-	bool bStopSvr;
 
 public:
 	clServer();

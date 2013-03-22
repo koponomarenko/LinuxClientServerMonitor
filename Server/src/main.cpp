@@ -14,30 +14,8 @@ void RunDemon();
 
 int main()
 {
-//	while (1)
-//	{
-//		try
-//		{
-//			clServer Server;
-//			Server.Start();
-//			std::cerr << "Server stopped" << std::endl;
-//			break;
-//		}
-//		catch (std::strinlg & ex)
-//		{
-//			std::cerr << "Error: " << ex << std::endl;
-//		}
-//		catch (...)
-//		{
-//			std::cerr << "Unknown exception!" << std::endl;
-//		}
-//		std::cerr << "Server restarted" << std::endl;
-//	}
-//	return 0;
+	pid_t pid = fork();
 
-	pid_t pid;
-
-	pid = fork();
 	switch(pid)
 	{
 	case 0: // in new thread
@@ -59,7 +37,7 @@ void RunDemon()
 {
 	umask(0); /* Change the file mode mask */
 
-	std::ofstream flog("/var/log/MyServer.log"); // open log file
+	std::ofstream flog("/var/log/Server.log"); // open log file
 
 	flog << "Server started" << std::endl;
 
@@ -87,7 +65,8 @@ void RunDemon()
 
 	/* Daemon-specific initialization goes here */
 
-	/* Save pid to file for daemon script */
+
+	/* Save process-id to file for daemon script */
 	std::ofstream fpid(PID_FILE);
 	if (!fpid.is_open())
 	{
@@ -105,8 +84,6 @@ void RunDemon()
 		{
 			clServer Server;
 			Server.Start();
-			flog << "Server stopped" << std::endl;
-			break;
 		}
 		catch (std::string & ex)
 		{
@@ -119,6 +96,6 @@ void RunDemon()
 		flog << "Server restarted" << std::endl;
 	}
 
-	remove(PID_FILE);
+	// remove(PID_FILE); // daemon script does it himself
 }
 

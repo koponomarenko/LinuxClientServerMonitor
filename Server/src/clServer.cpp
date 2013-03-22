@@ -20,7 +20,7 @@ string clServer::sTmp_ = "~base.xml";
 
 
 
-clServer::clServer() : ListenerSock(0), bStopSvr(false)
+clServer::clServer() : ListenerSock(0)
 {
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(3425);
@@ -38,14 +38,12 @@ void clServer::Start()
 	CheckBaseFile();
 	OpenHostSocket();
 
-	cout << "Server working." << endl;
-
 	int ClientSock;
-	while (!bStopSvr)
+	while (1)
 	{
 		ClientSock = accept(ListenerSock, NULL, NULL);
 		if (ClientSock < 0)
-			continue; // TODO
+			continue;
 		StartNewConnection(ClientSock);
 	}
 
@@ -53,7 +51,7 @@ void clServer::Start()
 }
 
 
-void clServer::StartNewConnection(int ClientSock) // this part of code can be thread
+void clServer::StartNewConnection(int ClientSock) // this part of code can be new thread
 {
 	int nBytes;
 	const short kBufSize = 512;
@@ -64,7 +62,7 @@ void clServer::StartNewConnection(int ClientSock) // this part of code can be th
 	bool bExit = false;
 
 
-	while (!bExit && !bStopSvr)
+	while (!bExit)
 	{
 		sAcceptedLine.clear();
 		sResult.clear();
@@ -126,12 +124,7 @@ void clServer::ParseAndDoCommand(string & sCommandLine, string & sResult)
 		sCommand = sCommandLine;
 
 
-	if (sCommand == "killsvr")
-	{
-		bStopSvr = true;
-		sResult = "Server shutting down ...";
-	}
-	else if (sCommand == "set")
+	if (sCommand == "set")
 	{
 		pos = sCommandLine.find_first_of(' ');
 		if (pos == string::npos)
