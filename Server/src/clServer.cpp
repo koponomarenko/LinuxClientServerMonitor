@@ -12,11 +12,13 @@
 #include <errno.h>
 #include <iostream>
 #include <unistd.h> // for close/unlink function
+#include <algorithm>
 
 using namespace std;
 
 string clServer::sBase_ = "base.xml";
 string clServer::sTmp_ = "~base.xml";
+unsigned char clServer::PingBuf = 1;
 
 
 
@@ -39,19 +41,39 @@ void clServer::Start()
 	OpenHostSocket();
 
 	int ClientSock;
+	int nBytes;
+	unsigned char ConnectType;
 	while (1)
 	{
 		ClientSock = accept(ListenerSock, NULL, NULL);
 		if (ClientSock < 0)
 			continue;
-		StartNewConnection(ClientSock);
+
+		nBytes = recv(ClientSock, &ConnectType, sizeof(ConnectType), 0);
+		if(nBytes <= 0) // error/closed connection
+		{
+			close(ClientSock);
+			continue;
+		}
+
+		switch (ConnectType)
+		{
+		case 0: // Client
+			StartClientConnection(ClientSock);
+			break;
+
+		case 1: // Monitor
+			send(ClientSock, &PingBuf, sizeof(PingBuf), 0); // send response to monitor
+			Monitors.insert(ClientSock);
+			break;
+		}
 	}
 
 	CloseHostSocket();
 }
 
 
-void clServer::StartNewConnection(int ClientSock) // this part of code can be new thread
+void clServer::StartClientConnection(int ClientSock) // this part of code can be new thread
 {
 	int nBytes;
 	const short kBufSize = 512;
@@ -80,6 +102,9 @@ void clServer::StartNewConnection(int ClientSock) // this part of code can be ne
 
 		if (bExit) break;
 
+		for (set<int>::iterator it = Monitors.begin(); it != Monitors.end(); ++it)
+			send(*it, &PingBuf, sizeof(PingBuf), 0); // TODO need to accept a respond from Monitor
+
 		try
 		{
 			ParseAndDoCommand(sAcceptedLine, sResult);
@@ -101,6 +126,10 @@ void clServer::StartNewConnection(int ClientSock) // this part of code can be ne
 			bIsResult = false;
 			send(ClientSock, &bIsResult, 1, 0);
 		}
+
+		// TODO this two string only for temporary work with one client!
+			close(ClientSock);
+			return;
 	}
 
 	close(ClientSock);

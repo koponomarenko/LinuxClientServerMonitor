@@ -9,6 +9,7 @@
 #define CLSERVER_H_
 
 #include <string>
+#include <set>
 #include <sys/types.h> // for socket
 #include <sys/socket.h> // for socket
 #include <netinet/in.h>
@@ -19,9 +20,12 @@ class clServer
 private:
 	static std::string sBase_;
 	static std::string sTmp_;
+	static unsigned char PingBuf;
 
 	int ListenerSock;
 	sockaddr_in addr;
+
+	std::set<int> Monitors;
 
 public:
 	clServer();
@@ -30,7 +34,7 @@ public:
 	void Start();
 
 private:
-	void StartNewConnection(int ClientSock);
+	void StartClientConnection(int ClientSock);
 
 	void ParseAndDoCommand(std::string & sCommandLine, std::string & sResult);
 

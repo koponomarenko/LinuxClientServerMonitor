@@ -22,6 +22,7 @@ clClient::clClient() : Sock(0)
 
 clClient::~clClient()
 {
+	CloseSocket();
 }
 
 
@@ -43,18 +44,23 @@ static int sendall(int s, const char * buf, int len, int flags)
 
 void clClient::Start()
 {
+	unsigned char ConnectType = 0; // Client type (need for server)
+	const short kBufSize = 512;
+
 	bool bIsResult;
 	bool bExit = false;
-	const short kBufSize = 512;
 	char buf[kBufSize];
 	int nBytes;
 	string sCommandLine;
 	string sResult;
 
+
+//	OpenSocket();
+
 	cout << "Client working." << endl;
 	cout << "use \"exit\" to exit" << endl;
 
-	OpenSocket();
+//	send(Sock, &ConnectType, sizeof(ConnectType), 0); // Introduce to server
 
 	while (!bExit)
 	{
@@ -66,6 +72,8 @@ void clClient::Start()
 		if (sCommandLine == "exit")
 			break;
 
+		OpenSocket();
+		send(Sock, &ConnectType, sizeof(ConnectType), 0); // Introduce to server
 		sendall(Sock, sCommandLine.data(), sCommandLine.size(), 0); // my helpful own function
 
 		recv(Sock, &bIsResult, 1, 0);
@@ -87,6 +95,7 @@ void clClient::Start()
 
 			cout << sResult << endl;
 		}
+		CloseSocket(); // tmp decision
 	}
 
 	CloseSocket();
