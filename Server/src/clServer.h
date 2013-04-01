@@ -10,10 +10,7 @@
 
 #include <string>
 #include <set>
-#include <sys/types.h> // for socket
-#include <sys/socket.h> // for socket
 #include <netinet/in.h>
-
 
 class clServer
 {

@@ -14,6 +14,9 @@
 #include <unistd.h> // for close/unlink function
 #include <algorithm>
 
+#include <sys/types.h> // for socket
+#include <sys/socket.h> // for socket
+
 using namespace std;
 
 string clServer::sBase_ = "base.xml";
@@ -102,9 +105,6 @@ void clServer::StartClientConnection(int ClientSock) // this part of code can be
 
 		if (bExit) break;
 
-		for (set<int>::iterator it = Monitors.begin(); it != Monitors.end(); ++it)
-			send(*it, &PingBuf, sizeof(PingBuf), 0); // TODO need to accept a respond from Monitor
-
 		try
 		{
 			ParseAndDoCommand(sAcceptedLine, sResult);
@@ -141,8 +141,7 @@ void clServer::ParseAndDoCommand(string & sCommandLine, string & sResult)
 	string sCommand;
 	size_t pos = string::npos;
 
-
-	/* preparations */
+	// preparations
 	pos = sCommandLine.find_first_of(' ');
 	if (pos != string::npos)
 	{
@@ -166,6 +165,10 @@ void clServer::ParseAndDoCommand(string & sCommandLine, string & sResult)
 		string sValue = sCommandLine.substr(pos + 1); // extract value
 
 		Set(sTag, sValue);
+
+		string sToMonitors ("The Server has set tag: " + sTag + ", with value: " + sValue);
+		for (set<int>::iterator it = Monitors.begin(); it != Monitors.end(); ++it)
+			send(*it, sToMonitors.data(), sToMonitors.size(), 0); // TODO modification: need to accept a respond from Monitor
 	}
 	else if (sCommand == "get")
 	{

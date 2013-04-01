@@ -34,6 +34,10 @@ void clMonitor::Start()
 	unsigned char PingBuf;
 	int nBytes;
 
+	const short kBufSize = 512;
+	char buf[kBufSize];
+	string sResult;
+
 	OpenSocket();
 
 	cout << "Monitor working." << endl;
@@ -45,11 +49,17 @@ void clMonitor::Start()
 
 	while (1)
 	{
-		nBytes = recv(Sock, &PingBuf, sizeof(PingBuf), 0);
-		if(nBytes <= 0) // error/closed connection
-			throw string("connect lost");
+		sResult.clear();
 
-		cout << "Server has received something." << endl;
+		do
+		{
+			nBytes = recv(Sock, buf, kBufSize, 0);
+			if(nBytes <= 0) // error/closed connection
+				throw string("connect lost");
+			sResult.append(buf, nBytes);
+		} while (nBytes == kBufSize);
+
+		cout << sResult << endl;
 	}
 
 	CloseSocket();
